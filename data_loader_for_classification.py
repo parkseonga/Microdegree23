@@ -8,6 +8,29 @@ from pyvital import arr
 import time
 import multiprocessing
 
+def check_hypotension(map_values, threshold=65):
+    consecutive_count = 0
+    for map_value in map_values:
+        if map_value <= threshold:
+            consecutive_count += 1
+            if consecutive_count >= len(map_values):
+                return True
+        else:
+            consecutive_count = 0
+    return False
+
+def check_non_hypotension(map_values, threshold=65):
+    consecutive_count = 0
+    for map_value in map_values:
+        if map_value > threshold:
+            consecutive_count += 1
+            if consecutive_count >= len(map_values): 
+                return True
+        else:
+            consecutive_count = 0
+    return False
+
+
 def data_loader(caseid):
         
     opstart = df_cases[df_cases['caseid']==caseid]['opstart'].values[0]
@@ -18,7 +41,7 @@ def data_loader(caseid):
     MINUTES_AHEAD = 5*60
     SRATE = 100
     INSEC = 30  # input 길이 (논문과 같음)
-    SW_SIZE = 5  # sliding window size (논문에 따로 정의되어 있지 않음)
+    SW_SIZE = (20 * 60 * SRATE) + (5 * 60 * SRATE) + (20 * SRATE) # sliding window size (논문에 따로 정의되어 있지 않음)
 
     vals = vitaldb.load_case(caseid, [ECG, PPG, ART, CO2, MBP], 1/SRATE)
     vals[:,2] = arr.replace_undefined(vals[:,2])
@@ -31,21 +54,20 @@ def data_loader(caseid):
     a = []
     for i in range(0, len(vals) - (SRATE * (INSEC + MINUTES_AHEAD) + 1), SRATE * SW_SIZE):
         segx = vals[i:i + SRATE * INSEC, :4]  
-        segy = vals[i + SRATE * (INSEC + MINUTES_AHEAD) + 1, 4]
-        
-        if segy < 20 or segy > 200:
-            continue
+        segy_1min = vals[i + SRATE * (INSEC + MINUTES_AHEAD) + 1:(i + SRATE * (INSEC + MINUTES_AHEAD) + 1)+(SRATE * 60), 4]
+        segy_20min = vals[i + SRATE * (INSEC + MINUTES_AHEAD) + 1:(i + SRATE * (INSEC + MINUTES_AHEAD) + 1)+(SRATE * 20 * 60), 4]
 
-        '''
-        # maic 대회 참고하여 전처리 
-        if np.mean(np.isnan(segx)) > 0 or \
-            np.mean(np.isnan(segy)) > 0 or \
-            np.max(segy) > 200 or np.min(segy) < 20 or \
-            np.max(segy) - np.min(segy) < 30 or \
-            (np.abs(np.diff(segy[~np.isnan(segy)])) > 30).any():
-            i += SRATE  # 1 sec 씩 전진
-            continue
-        '''    
+        # if segy < 20 or segy > 200:
+        #     continue
+        
+        if check_hypotension(segy_1min):
+            segy = 1
+        elif check_non_hypotension(segy_20min):
+            segy = 0
+        else:
+            segy = np.nan
+
+        # 1분 이상 hypotension 
         x.append(segx)
         y.append(segy)
         c.append(caseid)
@@ -54,7 +76,7 @@ def data_loader(caseid):
     if len(x) > 0:
         print(caseid)
         ret = (np.array(x), np.array(y), np.array(c), np.array(a)) 
-        pickle.dump((ret), open(f"/home/seonga/md_hypo/minutes5_reg/{caseid}_vf.pkl", "wb"))
+        pickle.dump((ret), open(f"/home/seonga/md_hypo/minutes5_clf/{caseid}_vf.pkl", "wb"))
 
 
 if __name__ == '__main__':
@@ -78,7 +100,7 @@ if __name__ == '__main__':
     df_cases = df_cases[(df_cases['caseid'].isin(caseids))&(df_cases['age']>=18)&(df_cases['death_inhosp']!=1)]
     caseids = list(df_cases['caseid'].values)
     
-    already_caseids = os.listdir('/home/seonga/md_hypo/minutes5_reg/')
+    already_caseids = os.listdir('/home/seonga/md_hypo/minutes5_clf/')
     already_caseids = [int(caseid.replace('_vf.pkl','')) for caseid in already_caseids]
     
     caseids = list(set(caseids) - set(already_caseids))
