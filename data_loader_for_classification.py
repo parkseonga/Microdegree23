@@ -30,9 +30,8 @@ def check_non_hypotension(map_values, threshold=65):
             consecutive_count = 0
     return False
 
-
 def data_loader(caseid):
-        
+ 
     opstart = df_cases[df_cases['caseid']==caseid]['opstart'].values[0]
     opend = df_cases[df_cases['caseid']==caseid]['opend'].values[0]
     
@@ -41,24 +40,20 @@ def data_loader(caseid):
     MINUTES_AHEAD = 5*60
     SRATE = 100
     INSEC = 30  # input 길이 (논문과 같음)
-    SW_SIZE = (20 * 60 * SRATE) + (5 * 60 * SRATE) + (20 * SRATE) # sliding window size (논문에 따로 정의되어 있지 않음)
+    SW_SIZE = 1 * 60 # sliding window size (논문에 따로 정의되어 있지 않음)
 
-    vals = vitaldb.load_case(caseid, [ECG, PPG, ART, CO2, MBP], 1/SRATE)
-    vals[:,2] = arr.replace_undefined(vals[:,2])
+    vals = vitaldb.load_case(caseid, [ECG, PPG, CO2, MBP], 1/SRATE)
+    vals[:,3] = arr.replace_undefined(vals[:,3])
     vals = vals[opstart * SRATE:opend * SRATE]
     
-    # 20sec (20 00) - 5min (300 00) - 1min (60 00) = 38000 sample
     x = []
     y = []
     c = []
     a = []
-    for i in range(0, len(vals) - (SRATE * (INSEC + MINUTES_AHEAD) + 1), SRATE * SW_SIZE):
-        segx = vals[i:i + SRATE * INSEC, :4]  
-        segy_1min = vals[i + SRATE * (INSEC + MINUTES_AHEAD) + 1:(i + SRATE * (INSEC + MINUTES_AHEAD) + 1)+(SRATE * 60), 4]
-        segy_20min = vals[i + SRATE * (INSEC + MINUTES_AHEAD) + 1:(i + SRATE * (INSEC + MINUTES_AHEAD) + 1)+(SRATE * 20 * 60), 4]
-
-        # if segy < 20 or segy > 200:
-        #     continue
+    for i in range(0, len(vals) - (SRATE * (INSEC + MINUTES_AHEAD) + 1), SW_SIZE*SRATE):
+        segx = vals[i:i + SRATE * INSEC, :3]  
+        segy_1min = vals[i + SRATE * (INSEC + MINUTES_AHEAD) + 1:(i + SRATE * (INSEC + MINUTES_AHEAD) + 1)+(SRATE * 60), 3]
+        segy_20min = vals[i + SRATE * (INSEC + MINUTES_AHEAD) + 1:(i + SRATE * (INSEC + MINUTES_AHEAD) + 1)+(SRATE * 20 * 60), 3]
         
         if check_hypotension(segy_1min):
             segy = 1
@@ -67,7 +62,6 @@ def data_loader(caseid):
         else:
             segy = np.nan
 
-        # 1분 이상 hypotension 
         x.append(segx)
         y.append(segy)
         c.append(caseid)
@@ -75,9 +69,9 @@ def data_loader(caseid):
                 
     if len(x) > 0:
         print(caseid)
+        
         ret = (np.array(x), np.array(y), np.array(c), np.array(a)) 
-        pickle.dump((ret), open(f"/home/seonga/md_hypo/minutes5_clf/{caseid}_vf.pkl", "wb"))
-
+        pickle.dump((ret), open(f"/home/seonga/md_hypo/minutes5_clf_v2/{caseid}_vf.pkl", "wb"))
 
 if __name__ == '__main__':
     
@@ -100,14 +94,14 @@ if __name__ == '__main__':
     df_cases = df_cases[(df_cases['caseid'].isin(caseids))&(df_cases['age']>=18)&(df_cases['death_inhosp']!=1)]
     caseids = list(df_cases['caseid'].values)
     
-    already_caseids = os.listdir('/home/seonga/md_hypo/minutes5_clf/')
+    already_caseids = os.listdir('/home/seonga/md_hypo/minutes5_clf_v2/')
     already_caseids = [int(caseid.replace('_vf.pkl','')) for caseid in already_caseids]
     
     caseids = list(set(caseids) - set(already_caseids))
     print(len(caseids))
     
     start_time = time.time()
-    n_process = 80
+    n_process = 90
 
     manager = multiprocessing.Manager() 
     d = manager.dict() # shared dictionary
