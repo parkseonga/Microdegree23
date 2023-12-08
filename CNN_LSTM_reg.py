@@ -78,7 +78,7 @@ def fill_2d_missing_with_previous(arr): # 결측값 이전 값으로 대체
     # np.where를 사용하여 유효한 값과 결측값의 위치에 따라 값을 선택합니다.
     return np.where(filled, arr, np.nan)
 
-loaded_dataset = np.load('/home/ssung/md_hypo/all_reg_arr.npz', allow_pickle = True)
+loaded_dataset = np.load('./all_reg_arr.npz', allow_pickle = True)
 x_arr = loaded_dataset['x_arr']
 y_arr = loaded_dataset['y_arr']
 c_arr = loaded_dataset['c_arr']
@@ -247,4 +247,4 @@ mae = np.mean(np.abs(diff_y))
 print(f'Test MAE: {mae}')
 
 import pickle 
-pickle.dump((y_test, test_probs), open('/home/ssung/md_hypo/preds.pkl', 'wb'))
+pickle.dump((y_test, test_probs), open('./preds.pkl', 'wb'))
