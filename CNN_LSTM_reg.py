@@ -6,7 +6,6 @@ import torch
 import torch.nn as nn
 import torch.optim as optim
 from torch.utils.data import Dataset, DataLoader, ConcatDataset
-from sklearn.metrics import roc_auc_score, precision_recall_curve, f1_score, auc
 from tqdm import tqdm
 
 # 모델 정의
