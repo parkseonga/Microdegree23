@@ -171,9 +171,13 @@ optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)  # 학습률(
 criterion = nn.L1Loss() 
 model = model.to(device)
 
+import matplotlib.pyplot as plt 
+plt.figure(figsize = (7,7))
 # 훈련 루프
 for epoch in range(num_epochs):
     model.train()
+    train_loss = 0.0
+    train_loss_values = []
     with tqdm(train_loader, unit="batch") as tepoch:
         for x_train, y_train in tepoch:
             tepoch.set_description(f"Epoch {epoch+1}")
@@ -185,12 +189,17 @@ for epoch in range(num_epochs):
             loss.backward()
             optimizer.step()
             
+            train_loss += loss.item()
+            train_loss_values.append(train_loss)
+
             tepoch.set_postfix(loss=loss.item())
 
     all_probs = []
     all_labels = []
     # 검증
     model.eval()
+    val_loss = 0.0
+    val_loss_values = []
     with torch.no_grad():
         correct = 0
         total = 0
@@ -200,18 +209,24 @@ for epoch in range(num_epochs):
             
             optimizer.zero_grad()
             outputs = model(x_valid)
-                    
+            
+            loss = criterion(y_valid,outputs)            
+            val_loss += loss.item()
+            val_loss_values.append(val_loss)
+
             all_probs.extend(outputs.cpu().numpy())
             all_labels.extend(y_valid.cpu().numpy())
-            
+      
+    plt.plot(np.array(train_loss_values), 'r', label = 'train loss')
+    plt.plot(np.array(val_loss_values), 'r', label = 'val loss')
+    plt.legend()
+    plt.savefig('loss plot.png', bbox_inches = 'tight')
+    
     diff_y = [i-j for i, j in zip(all_labels, all_probs)]
     mae = np.mean(np.abs(diff_y))
     print("MAE Score:", mae)
-
-    # auc_score = roc_auc_score(all_labels, all_probs)
     print(f'Epoch [{epoch+1}/{num_epochs}], Validation MAE: {mae}%')
-    
-    
+
 # 모델을 평가 모드로 설정
 model.eval()
 
@@ -231,5 +246,5 @@ diff_y = [i-j for i, j in zip(y_test.cpu().numpy(), test_probs)]
 mae = np.mean(np.abs(diff_y))
 print(f'Test MAE: {mae}')
 
-# train, valid loss 저장 코드 추가 
-# 결과 저장
+import pickle 
+pickle.dump((y_test, test_probs), open('/home/ssung/md_hypo/preds.pkl', 'wb'))
