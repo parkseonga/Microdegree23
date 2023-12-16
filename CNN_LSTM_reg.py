@@ -229,21 +229,23 @@ for epoch in range(num_epochs):
 # 모델을 평가 모드로 설정
 model.eval()
 
-# 예측 확률을 저장할 리스트
-test_probs = []
-with torch.no_grad():
-    for i, batch in enumerate(tqdm(val_loader)):
-        x_test, y_test = batch
-        x_test, y_test = x_test.to(device), y_test.to(device) 
-        
-        outputs = model(x_test)
-        test_probs.extend(outputs.cpu().numpy())
+  # 예측 확률을 저장할 리스트
+  test_probs = []
+  y_tests = []
+  with torch.no_grad():
+      for i, batch in enumerate(tqdm(test_loader)):
+          x_test, y_test = batch
+          x_test, y_test = x_test.to(device), y_test.to(device) 
+          
+          outputs = model(x_test)
+          y_tests.extend(y_test.cpu().numpy())
+          test_probs.extend(outputs.cpu().numpy())
 
-diff_y = [i-j for i, j in zip(y_test.cpu().numpy(), test_probs)]
+diff_y = [i-j for i, j in zip(y_tests.cpu().numpy(), test_probs)]
 
 # 실제 레이블과 예측 확률을 사용하여 AUC 계산
 mae = np.mean(np.abs(diff_y))
 print(f'Test MAE: {mae}')
 
 import pickle 
-pickle.dump((y_test, test_probs), open('./preds.pkl', 'wb'))
+pickle.dump((y_tests, test_probs), open('./preds.pkl', 'wb'))
