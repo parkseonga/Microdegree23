@@ -7,13 +7,13 @@
 
 ### Team Members
 
-| <img src="https://avatars.githubusercontent.com/u/33725048?v=4" width="80"> | <img src="https://avatars.githubusercontent.com/u/70469008?v=4" width="80"> | <img src="https://avatars.githubusercontent.com/u/77106757?v=4" width="80"> | <img src="https://avatars.githubusercontent.com/u/130381077?v=4" width="80"> |
+| <img src="https://avatars.githubusercontent.com/u/33725048?v=4" width="90"> | <img src="https://avatars.githubusercontent.com/u/70469008?v=4" width="90"> | <img src="https://avatars.githubusercontent.com/u/77106757?v=4" width="90"> | <img src="https://avatars.githubusercontent.com/u/130381077?v=4" width="90"> |
 | :-------------------------------------------------------------------------: | :-------------------------------------------------------------------------: | :-------------------------------------------------------------------------: | :--------------------------------------------------------------------------: |
 |                   [박성아](https://github.com/parkseonga)                   |                  [박혜나](https://github.com/hyenagatha02)                  |                     [서병석](https://github.com/76stop)                     |                    [이승호](https://github.com/sshhoo123)                    |
 
 ### Deep learning models for the prediction of intraoperative hypotension
 
-![image1](https://github.com/parkseonga/Microdegree23/assets/70469008/f0abb0b7-8bca-4f06-9308-818feba918f2)
+<img src="https://github.com/parkseonga/Microdegree23/assets/70469008/f0abb0b7-8bca-4f06-9308-818feba918f2" width="80">
 
 #### 연구 목적
 
@@ -55,7 +55,7 @@ PPG 데이터를 활용한 non-invasive 1-channel 모델을 통해 classificatio
 - Y : (classification) 0 or 1 / (regression) 환자 MAP
 - c : 환자 번호 (학습 X)
 - a : 환자 연령, 성별 등 (학습 X)
-  ![image2](https://github.com/parkseonga/Microdegree23/assets/70469008/6f0ed59b-b602-4fe5-9fa1-03c1aa42aae5)
+  <img src="https://github.com/parkseonga/Microdegree23/assets/70469008/6f0ed59b-b602-4fe5-9fa1-03c1aa42aae5" width="80">
 
 #### Preprocess
 
@@ -68,12 +68,12 @@ PPG 데이터를 활용한 non-invasive 1-channel 모델을 통해 classificatio
 
 - classification: 3,257 cases / 193,189 samples
 - regression: 3,144 cases / 308,013 samples
-  ![image3](https://github.com/parkseonga/Microdegree23/assets/70469008/9d956361-634b-4e04-9fb0-cd8f9adc1076)
+  <img src="https://github.com/parkseonga/Microdegree23/assets/70469008/9d956361-634b-4e04-9fb0-cd8f9adc1076" width="80">
 
 #### train/valid/Test
 
 - train : valid : test = 6 : 2 : 2
-  ![image4](https://github.com/parkseonga/Microdegree23/assets/70469008/f905cefe-dc80-49ba-917e-47e558b8d843)
+  <img src="https://github.com/parkseonga/Microdegree23/assets/70469008/f905cefe-dc80-49ba-917e-47e558b8d843" width="80">
 
 ### Method
 
