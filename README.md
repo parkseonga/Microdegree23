@@ -1,19 +1,17 @@
 ### 💻 **딥러닝을 활용한 저혈압 및 실제 혈압 예측**
 
-![Logo](https://github.com/parkseonga/Microdegree23/assets/70469008/c9dcfd79-6a48-4c64-bafe-7cb5e0f14af1)
-
-## Introduction
+### Introduction
 
 - 본 프로젝트는 카이스트 GSDS 기초기계학습 마이크로디그리 프로그램 내 캡스톤 과목을 기반으로 합니다.
 - 본 프로젝트는 2020년에 발행된 <Deep learning models for the prediction of intraoperative hypotension> 논문에 대한 이해를 바탕으로, 논문에서 설명하는 모델을 직접 구현 및 실험 하는 데에 목적을 둡니다.
 
-## Team Members
+### Team Members
 
-| <img src="https://avatars.githubusercontent.com/u/33725048?v=4" width="80"> | <img src="https://avatars.githubusercontent.com/u/70469008?v=4" width="80"> | <img src="https://avatars.githubusercontent.com/u/77106757?v=4" width="80"> | <img src="" width="80"> |
-| :-------------------------------------------------------------------------: | :-------------------------------------------------------------------------: | :-------------------------------------------------------------------------: | :---------------------: |
-|                   [박성아](https://github.com/parkseonga)                   |                  [박혜나](https://github.com/hyenagatha02)                  |                     [서병석](https://github.com/76stop)                     |       [이승호]()        |
+| <img src="https://avatars.githubusercontent.com/u/33725048?v=4" width="80"> | <img src="https://avatars.githubusercontent.com/u/70469008?v=4" width="80"> | <img src="https://avatars.githubusercontent.com/u/77106757?v=4" width="80"> | <img src="https://avatars.githubusercontent.com/u/130381077?v=4" width="80"> |
+| :-------------------------------------------------------------------------: | :-------------------------------------------------------------------------: | :-------------------------------------------------------------------------: | :--------------------------------------------------------------------------: |
+|                   [박성아](https://github.com/parkseonga)                   |                  [박혜나](https://github.com/hyenagatha02)                  |                     [서병석](https://github.com/76stop)                     |                    [이승호](https://github.com/sshhoo123)                    |
 
-## [Deep learning models for the prediction of intraoperative hypotension](https://pubmed.ncbi.nlm.nih.gov/33558051/)
+### Deep learning models for the prediction of intraoperative hypotension
 
 ![image1](https://github.com/parkseonga/Microdegree23/assets/70469008/f0abb0b7-8bca-4f06-9308-818feba918f2)
 
@@ -31,17 +29,17 @@
   - classification : 수술 중 저혈압 발생 여부 판단 (0 or 1)
   - regression : 환자의 실제 혈압 수치 예측
 
-## [VitalDB open dataset](https://vitaldb.net/dataset/)
+### [VitalDB open dataset](https://vitaldb.net/dataset/)
 
 - 서울대병원에서 시행된 6,388건의 수술에 대해 intraoperative vital signs(수술 중 생체 신호), perioperative clinical information(수술 전후 임상 정보), perioperative laboratory results(수술 전후 실험 결과) 수집
   - 데이터 형태 : 500hz 고해상도 waveform / 1-7초 간격의 numeric 형태의 biosignal data
   - 수집 방법 : vital recorder 활용
 
-## Goal
+### Goal
 
 - PPG 데이터를 활용한 non-invasive 1-channel 모델을 통해 classification, regression 수행
 
-## Data
+### Data
 
 - structure
   - X : 길이 3000(30초 x 100Hz)의 PPG segment
@@ -62,7 +60,7 @@
   - train : valid : test = 6 : 2 : 2
     ![image4](https://github.com/parkseonga/Microdegree23/assets/70469008/f905cefe-dc80-49ba-917e-47e558b8d843)
 
-## Method
+### Method
 
 - Data
   - 입력 : 30초 x 100Hz 길이의 PPG (Photoplethysmography) 데이터
