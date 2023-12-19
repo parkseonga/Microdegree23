@@ -184,7 +184,7 @@ for epoch in range(num_epochs):
             optimizer.zero_grad()
             outputs = model(x_train)
                     
-            loss = criterion(y_train,outputs)
+            loss = criterion(outputs, y_train)
             loss.backward()
             optimizer.step()
             
@@ -209,7 +209,7 @@ for epoch in range(num_epochs):
             optimizer.zero_grad()
             outputs = model(x_valid)
             
-            loss = criterion(y_valid,outputs)            
+            loss = criterion(outputs, y_valid)            
             val_loss += loss.item()
             val_loss_values.append(val_loss)
 
