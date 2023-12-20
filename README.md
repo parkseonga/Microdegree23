@@ -10,7 +10,7 @@
 
 | <img src="https://avatars.githubusercontent.com/u/33725048?v=4" width="100"> | <img src="https://avatars.githubusercontent.com/u/70469008?v=4" width="100"> | <img src="https://avatars.githubusercontent.com/u/77106757?v=4" width="100"> | <img src="https://avatars.githubusercontent.com/u/130381077?v=4" width="100"> |
 | :--------------------------------------------------------------------------: | :--------------------------------------------------------------------------: | :--------------------------------------------------------------------------: | :---------------------------------------------------------------------------: |
-|                   [박성아](https://github.com/parkseonga)                    |                  [박혜나](https://github.com/hyenagatha02)                   |                     [서병석](https://github.com/76stop)                      |                    [이승호](https://github.com/sshhoo123)                     |
+|                   [박성아](https://github.com/parkseonga)                    |                  [박혜나](https://github.com/hyenagatha02)                   |                     [Benajamin](https://github.com/76stop)                      |                    [이승호](https://github.com/sshhoo123)                     |
 
 <br/>
 
