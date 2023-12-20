@@ -1,215 +1,121 @@
 import numpy as np
-import pandas as pd
 import os
-import pickle
-import vitaldb
-import random
-from pyvital import arr
-import time
-import multiprocessing
+import pickle 
 
-ECG = 'SNUADC/ECG_II'
-PPG = 'SNUADC/PLETH'
-ART = 'SNUADC/ART'
-MBP = 'Solar8000/ART_MBP'
-CO2 = 'Primus/CO2'  # 62.5hz 로 다른 waveform 과 주파수가 다름 
+task = 'regression' # either 'classification' or 'regression'
 
-def check_hypotension(map_values, threshold=65):
-    consecutive_count = 0
-    for map_value in map_values:
-        if map_value <= threshold:
-            consecutive_count += 1
-            if consecutive_count >= len(map_values):
-                return True
-        else:
-            consecutive_count = 0
-    return False
+def scale_data(data): # ppg scale
+    rng = np.nanmax(data) - np.nanmin(data)
+    minimum = np.nanmin(data)
+    data = (data - minimum) / rng
+    return data
 
-def check_non_hypotension(map_values, threshold=65):
-    consecutive_count = 0
-    for map_value in map_values:
-        if map_value > threshold:
-            consecutive_count += 1
-            if consecutive_count >= len(map_values): 
-                return True
-        else:
-            consecutive_count = 0
-    return False
-
-def data_loader(caseid, df_case):
-    opstart = df_case['opstart'].values[0]
-    opend = df_case['opend'].values[0]
+def fill_2d_missing_with_previous(arr): # 결측값 이전 값으로 대체 
+    # 결측값이 아닌 값들의 위치를 찾음
+    valid = np.isnan(arr) == False
     
-    demo = df_case[['age', 'sex', 'weight', 'height', 'asa']].values
-    
-    MINUTES_AHEAD = 5*60
-    SRATE = 100
-    INSEC = 30  # input 길이 (논문과 같음)
-    SW_SIZE = 1 * 60 # sliding window size (논문에 따로 정의되어 있지 않음)
+    # 누적 최대값을 사용하여 각 위치에서 마지막으로 관찰된 유효한 값을 채움
+    filled = np.maximum.accumulate(valid, axis=1)
 
-    vals = vitaldb.load_case(caseid, [ECG, PPG, CO2, MBP], 1/SRATE)
-    vals[:,3] = arr.replace_undefined(vals[:,3])
-    vals = vals[opstart * SRATE:opend * SRATE]
-    
-    x = []
-    y = []
-    c = []
-    a = []
-    for i in range(0, len(vals) - (SRATE * (INSEC + MINUTES_AHEAD) + 1), SW_SIZE*SRATE):
-        segx = vals[i:i + SRATE * INSEC, :3]  
-        segy_1min = vals[i + SRATE * (INSEC + MINUTES_AHEAD) + 1:(i + SRATE * (INSEC + MINUTES_AHEAD) + 1)+(SRATE * 60), 3]
-        segy_20min = vals[i + SRATE * (INSEC + MINUTES_AHEAD) + 1:(i + SRATE * (INSEC + MINUTES_AHEAD) + 1)+(SRATE * 20 * 60), 3]
+    # np.where를 사용하여 유효한 값과 결측값의 위치에 따라 값을 선택
+    return np.where(filled, arr, np.nan)
+
+if task == "classification":
+    loaded_dataset = np.load(os.getcwd()+'/capstone/data/all_clf_arr.npz', allow_pickle = True)
+else:
+    loaded_dataset = np.load(os.getcwd()+'/capstone/data/all_reg_arr.npz', allow_pickle = True)
+print("complete load")
+
+x_arr = loaded_dataset['x_arr']
+y_arr = loaded_dataset['y_arr']
+c_arr = loaded_dataset['c_arr']
+a_arr = loaded_dataset['a_arr']
+
+x_arr = x_arr[~np.isnan(y_arr)]
+c_arr = c_arr[~np.isnan(y_arr)]
+a_arr = a_arr[~np.isnan(y_arr)]
+y_arr = y_arr[~np.isnan(y_arr)]
+
+x_arr = x_arr[:,:,1].reshape(-1, 1, 3000) # pytorch 를 위한 shape 으로 변경 
+x_arr = fill_2d_missing_with_previous(x_arr)
+
+print("complete fill_2d_missing_with_previous")
+
+# x 에 nan 이 없는 것만 남기기 
+idx = []
+for i in range(len(x_arr)):
+    if (np.isnan(x_arr[i]).sum() == 0)&(np.min(x_arr[i]) > 0):
+        idx.append(i)
         
-        if check_hypotension(segy_1min):
-            segy = 1
-        elif check_non_hypotension(segy_20min):
-            segy = 0
-        else:
-            segy = np.nan
+x_arr = x_arr[idx].astype(float)
+y_arr = y_arr[idx].astype(float)
+c_arr = c_arr[idx]
 
-        x.append(segx)
-        y.append(segy)
-        c.append(caseid)
-        a.append(demo)
-                
-    if len(x) > 0:
-        print(caseid)
-        
-        ret = (np.array(x), np.array(y), np.array(c), np.array(a)) 
-        pickle.dump((ret), open(f"{os.getcwd()}/capstone/data/md_hypo/minutes5_clf/{caseid}_vf.pkl", "wb"))
+'''
+# train, valid, test split (caseid 기준)
+caseids = list(np.unique(c_arr))
+nvalid = max(1, int(len(caseids) * 0.4))
+ntest = max(1, int(len(caseids) * 0.2))
 
-def data_loader_reg(caseid, df_case):
-    opstart = df_case['opstart'].values[0]
-    opend = df_case['opend'].values[0]
-    
-    demo = df_case[['age', 'sex', 'weight', 'height', 'asa']].values
-    
-    MINUTES_AHEAD = 5*60
-    SRATE = 100
-    INSEC = 30  # input 길이 (논문과 같음)
-    SW_SIZE = 5  # sliding window size (논문에 따로 정의되어 있지 않음)
+caseids_train = caseids[nvalid:]
+caseids_valid = caseids[ntest:nvalid]
+caseids_test = caseids[:ntest]
+'''
+print("complete remove nan")
 
-    vals = vitaldb.load_case(caseid, [ECG, PPG, ART, CO2, MBP], 1/SRATE)
-    vals[:,2] = arr.replace_undefined(vals[:,2])
-    vals = vals[opstart * SRATE:opend * SRATE]
-    
-    # 20sec (20 00) - 5min (300 00) - 1min (60 00) = 38000 sample
-    x = []
-    y = []
-    c = []
-    a = []
-    for i in range(0, len(vals) - (SRATE * (INSEC + MINUTES_AHEAD) + 1), SRATE * SW_SIZE):
-        segx = vals[i:i + SRATE * INSEC, :4]  
-        segy = vals[i + SRATE * (INSEC + MINUTES_AHEAD) + 1, 4]
-        
-        if segy < 20 or segy > 200:
-            continue
+if task == "classification":
+    caseids_train, caseids_valid, caseids_test = pickle.load(open(os.getcwd()+'/capstone/data/clf_train_valid_test_caseids.pkl', 'rb'))
+else:
+    caseids_train, caseids_valid, caseids_test = pickle.load(open(os.getcwd()+'/capstone/data/regtrain_valid_test_caseids.pkl', 'rb'))
 
-        '''
-        # maic 대회 참고하여 전처리 
-        if np.mean(np.isnan(segx)) > 0 or \
-            np.mean(np.isnan(segy)) > 0 or \
-            np.max(segy) > 200 or np.min(segy) < 20 or \
-            np.max(segy) - np.min(segy) < 30 or \
-            (np.abs(np.diff(segy[~np.isnan(segy)])) > 30).any():
-            i += SRATE  # 1 sec 씩 전진
-            continue
-        '''    
-        x.append(segx)
-        y.append(segy)
-        c.append(caseid)
-        a.append(demo)
-                
-    if len(x) > 0:
-        print(caseid)
-        ret = (np.array(x), np.array(y), np.array(c), np.array(a)) 
-        pickle.dump((ret), open(f"{os.getcwd()}/capstone/data/md_hypo/minutes5_reg/{caseid}_vf.pkl", "wb"))
+print("complete load reg_train_valid_test_caseids")
 
+train_mask = np.isin(c_arr, caseids_train).flatten()
+valid_mask = np.isin(c_arr, caseids_valid).flatten()
+test_mask = np.isin(c_arr, caseids_test).flatten()
 
-def main_classification():
-    path = os.getcwd()
-    case_dir = f"{path}/capstone/data/md_hypo/minutes5_clf/"  
-    if not ( os.path.isdir( case_dir ) ):
-        os.makedirs ( os.path.join ( case_dir ) )
+x_train = x_arr[train_mask]
+y_train = y_arr[train_mask]
+c_train = c_arr[train_mask]
 
-    df_trks = pd.read_csv('https://api.vitaldb.net/trks')  # 트랙 목록
-    df_cases = pd.read_csv("https://api.vitaldb.net/cases")  # 임상 정보
+x_valid = x_arr[valid_mask]
+y_valid = y_arr[valid_mask]
+c_valid = c_arr[valid_mask]
 
-    caseids = list(
-    set(df_trks[df_trks['tname'] == MBP]['caseid']) &
-    set(df_trks[df_trks['tname'] == CO2]['caseid']) &
-    set(df_trks[df_trks['tname'] == ART]['caseid']) &
-    set(df_trks[df_trks['tname'] == ECG]['caseid']) &
-    set(df_trks[df_trks['tname'] == PPG]['caseid']))
-    
-    df_cases = df_cases[(df_cases['caseid'].isin(caseids))&(df_cases['age']>=18)&(df_cases['death_inhosp']!=1)]
-    caseids = list(df_cases['caseid'].values)
-    
-    already_caseids = os.listdir(os.getcwd()+'/capstone/data/md_hypo/minutes5_clf/')
-    already_caseids = [int(caseid.replace('_vf.pkl','')) for caseid in already_caseids]
-    
-    caseids = list(set(caseids) - set(already_caseids))
-    print(len(caseids))
-    
-    start_time = time.time()
-    n_process = 90
+x_test = x_arr[test_mask]
+y_test = y_arr[test_mask]
+c_test = c_arr[test_mask]
 
-    manager = multiprocessing.Manager() 
-    d = manager.dict() # shared dictionary
+print("complete data saperate")
 
-    pool = multiprocessing.Pool(processes=n_process)
-    for caseid in caseids:
-        pool.apply_async(data_loader, (caseid, df_cases[df_cases['caseid']==caseid]))
+for i in range(len(x_train)):
+    x_train[i,0,:] = scale_data(x_train[i,0,:]) 
 
-    pool.close()
-    pool.join()
-    
-    print("=== %s seconds ===" % (time.time() - start_time))   # 5개 266초  
+for i in range(len(x_valid)):
+    x_valid[i,0,:] = scale_data(x_valid[i,0,:]) 
 
-def main_regression():
-    path = os.getcwd()
-    case_dir = f"{path}/capstone/data/md_hypo/minutes5_reg/"  
-    if not ( os.path.isdir( case_dir ) ):
-        os.makedirs ( os.path.join ( case_dir ) )
+for i in range(len(x_test)):
+    x_test[i,0,:] = scale_data(x_test[i,0,:])
 
-    df_trks = pd.read_csv('https://api.vitaldb.net/trks')  # 트랙 목록
-    df_cases = pd.read_csv("https://api.vitaldb.net/cases")  # 임상 정보
+print("complete data loading")
 
-    caseids = list(
-    set(df_trks[df_trks['tname'] == MBP]['caseid']) &
-    set(df_trks[df_trks['tname'] == CO2]['caseid']) &
-    set(df_trks[df_trks['tname'] == ART]['caseid']) &
-    set(df_trks[df_trks['tname'] == ECG]['caseid']) &
-    set(df_trks[df_trks['tname'] == PPG]['caseid']))
-    
-    df_cases = df_cases[(df_cases['caseid'].isin(caseids))&(df_cases['age']>=18)&(df_cases['death_inhosp']!=1)]
-    caseids = list(df_cases['caseid'].values)
-    
-    already_caseids = os.listdir(os.getcwd()+'/capstone/data/md_hypo/minutes5_reg/')
-    already_caseids = [int(caseid.replace('_vf.pkl','')) for caseid in already_caseids]
-    
-    caseids = list(set(caseids) - set(already_caseids))
-    print(len(caseids))
-    
-    start_time = time.time()
-    n_process = 80
+print("caseids train cnt: {}, caseids val cnt {}, caseids test cnt: {}".format(len(caseids_train), len(caseids_valid), len(caseids_test)))
+print("samples train cnt: {}, samples val cnt: {}, samples test cnt: {}".format(len(x_train), len(x_valid), len(x_test)))
 
-    manager = multiprocessing.Manager() 
-    d = manager.dict() # shared dictionary
+if task == "classification":
+    prefix = "clf_"
+else:
+    prefix = "reg_"
 
-    pool = multiprocessing.Pool(processes=n_process)
-    for caseid in caseids:
-        pool.apply_async(data_loader_reg, (caseid, df_cases[df_cases['caseid']==caseid]))
-
-    pool.close()
-    pool.join()
-    
-    print("=== %s seconds ===" % (time.time() - start_time))   # 5개 266초  
-
-if __name__ == '__main__':
-    # main_classification()
-    # main_regression()
-
-    path = os.getcwd()
-    loaded_dataset = np.load(f"{path}/capstone/data/md_hypo/minutes5_reg_/1_vf.pkl", allow_pickle = True)
-    print(loaded_dataset)
+pickle.dump((caseids_train), open(f"{os.getcwd()}/capstone/data/{prefix}caseids_train_vf.pkl", "wb"))
+pickle.dump((caseids_valid), open(f"{os.getcwd()}/capstone/data/{prefix}caseids_valid_vf.pkl", "wb"))
+pickle.dump((caseids_test), open(f"{os.getcwd()}/capstone/data/{prefix}caseids_test_vf.pkl", "wb"))
+pickle.dump((x_train), open(f"{os.getcwd()}/capstone/data/{prefix}x_train_vf.pkl", "wb"))
+pickle.dump((x_valid), open(f"{os.getcwd()}/capstone/data/{prefix}x_valid_vf.pkl", "wb"))
+pickle.dump((x_test), open(f"{os.getcwd()}/capstone/data/{prefix}x_test_vf.pkl", "wb"))
+pickle.dump((y_train), open(f"{os.getcwd()}/capstone/data/{prefix}y_train_vf.pkl", "wb"))
+pickle.dump((y_valid), open(f"{os.getcwd()}/capstone/data/{prefix}y_valin_vf.pkl", "wb"))
+pickle.dump((y_test), open(f"{os.getcwd()}/capstone/data/{prefix}y_test_vf.pkl", "wb"))
+pickle.dump((c_train), open(f"{os.getcwd()}/capstone/data/{prefix}c_train_vf.pkl", "wb"))
+pickle.dump((c_valid), open(f"{os.getcwd()}/capstone/data/{prefix}c_valid_vf.pkl", "wb"))
+pickle.dump((c_test), open(f"{os.getcwd()}/capstone/data/{prefix}c_test_vf.pkl", "wb"))
